@@ -1,10 +1,23 @@
+require 'ipaddr'
 class LogFile
-	attr_accessor :file_name, :file_path, :log_entries, :directory, :directory_index, :log_entry_index, :list_start
+	attr_accessor :file_name, :file_path, :log_entries, :directory, :directory_index, :log_entry_index, :list_start, :sort_filter
+	
+	############################### 
+	#  Setup the object ... 
+	#  make sure @log_entries is an
+	#  array
+	###############################
 	def initialize
 		cd "./"
 		@log_entries = Array.new
+		@sort_filter = SortFilter.new
 	end
 
+	###############################
+	# change directory of LogFile
+	# object to path, if possible.
+	# If not, return false.
+	###############################
 	def cd path
 		if Dir.exist?(path)
 			@file_path = path
@@ -17,6 +30,11 @@ class LogFile
 		end	
 	end
 
+	######################################
+	# Once the user has chozen a file
+	# we need to load data from the file
+	# into our log_entries array
+	######################################
 	def load_file
 		if File.file?(@file_path + @directory.entries[@directory_index])
                 	@file_name = @directory.entries[@directory_index]
@@ -31,6 +49,15 @@ class LogFile
 			false
 		end
 	end
+
+	#####################################
+	# method which figures out what do to
+	# with a user's selection. It may be 
+	# a file or directory. If it's a 
+	# directory, change into it and 
+	# return symbol :directory. If it's
+	# a file, load it, and return :file
+	#####################################
 	def select_directory_or_load_file
                 if cd(@file_path + @directory.entries[@directory_index] + "/")
                         :directory
@@ -47,6 +74,13 @@ class LogEntry
 
 	attr_accessor :ip_address, :time_stamp, :request, 
 		:response_code, :file_size, :http_referer, :user_agent
+
+	######################################
+	# LogEntry is an object represntation
+	# of all the data of a row from a
+	# log file, so we pass a row of string
+	# data from the log_file, and parse it
+	######################################	
 	def initialize row = nil
 		if row
 			row.gsub! /\t/, "     "
@@ -54,8 +88,15 @@ class LogEntry
 			set_properties match_data
 		end
 	end
+
+
+	########################################
+	# load the properties into variables
+	# from match_data, the MatchData object
+	# which comes from parsing with a regex
+	########################################
 	def set_properties match_data
-		@ip_address = match_data[1]
+		@ip_address = IPAddr.new match_data[1]
 		@request = match_data[10]
 		@response_code = match_data[11]
 		@file_size = match_data[12]
@@ -65,10 +106,43 @@ class LogEntry
 	end
 
 
+
+	##################################
+	# parse_row wraps up our regular
+	# expression
+	##################################
+
 	def parse_row row
+		# Match		IP Address		    User and Computer		Time Stamp					Request   Code	Size	Referer	  Agent
 		regex = /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}) (\S*) (\S*) \[(\d\d)\/([^\/]*)\/(\d{4}):(\d\d):(\d\d):(\d\d) [\+-]\d{4}\] "([^"]*)" (\S+) (\S+) "([^"]*)" "([^"]*)"/
 		regex.match row
 	end
 
 
+end
+class SortFilter
+	attr_accessor :field_list, :field_name_index, :field_selection
+
+	##############################################
+	# Setup the sort/filter object
+	# @field_list = multidimensional
+	# array[a][b][c]
+	# a => different fields
+	# b => 0 = field_name, 
+	#	1 = [array of choices], 
+	#	or 1 = input from user
+	# c => possible responses in 
+	# choice list
+	# @field_name_index => current selected field
+	# @field_selection => selections of c, above
+	#############################################
+	def initialize
+		@field_list = [[:sort_by, [:none, :time_stamp, :ip_address, :file_size]], [:sort_direction, [:asc, :desc]],[:time_stamp],[:ip_address],[:request]]
+		@field_name_index = 0
+		@field_selection = [0,0]
+		
+		
+	end
+
+	
 end

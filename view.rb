@@ -1,4 +1,8 @@
 class BasicView
+
+	#######################
+	# Basic Terminal Codes
+	#######################
 	def clear_display	
 		print "\e[2J"
 	end
@@ -15,6 +19,9 @@ class BasicView
 		print "\e[#{row};#{column}H"
 	end
 
+	#########################
+	# centers a line of text
+	#########################
 	def center text
 		columns = $stdin.winsize[1]
 		text_length = text.length
@@ -22,12 +29,22 @@ class BasicView
 		text = "\e[#{column_location}G#{text}"
 	end
 
+	####################
+	# output text in red
+	####################
 	def red text
 		"\e[31;40m#{text}\e[0m"
 	end
 
 end
 class FileDialogView < BasicView
+
+	#############################
+	# Display - Sets up 
+	# a view's terminal display
+	# and outputs the view
+	# for the user to see
+	#############################
 	def display log_file
 		clear_display
 		turn_off_cursor
@@ -35,25 +52,38 @@ class FileDialogView < BasicView
 		puts red(center("Select an Apache log file."))
 		update log_file
 	end
+
+
+	######################################
+	# Updates the list, by writing
+	# everything from row 2 to the bottom
+	# of the display
+	######################################
 	def update log_file
 		set_cursor 2, 1
 		log_file.directory.each_with_index do |directory_entry, index |
                         if index < log_file.list_start
-                                next
+                                next # Skip over the loop if it isn't far enough along to display what's in range
                         end
                         if index > log_file.list_start + $stdin.winsize[0] - 3
-                                break
+                                break # end the loop when we have displayed enough 
                         end
                         directory_entry = directory_entry + "/" if Dir.exist?(log_file.file_path + directory_entry)
                         directory_entry = red(directory_entry) if index == log_file.directory_index
                         print directory_entry + "\e[K\n"
                         
 		end
-		print "\e[J"
+		print "\e[J" #Clear the display from cursor to the end
 		set_cursor $stdin.winsize[0], 1
-		print red("Type 'q' to exit; up/down to move; return to select")
+		print red("Esc to exit; up/down to move; return to select")
               
 	end
+
+	###############################
+	# If this returns true
+	# we can exit the program with
+	# 'q'
+	###############################
 	def quittable?
 		true
 	end
@@ -62,6 +92,11 @@ end
 
 class LogListView < BasicView
 
+
+	###########################
+	# Sets up the display for
+	# a log file itself.
+	###########################
 	def display log_file
 		clear_display
 		set_cursor
@@ -70,6 +105,10 @@ class LogListView < BasicView
 		
 	end
 
+	##########################
+	# Updates from line 2
+	# to the end
+	##########################
 	def update log_file
 		set_cursor 2,1
 		log_file.log_entries.each_with_index do |entry, index|
@@ -83,7 +122,7 @@ class LogListView < BasicView
 			total_columns = $stdout.winsize[1] - 44 # (space after ip address, response code, and file size)
 			text_column_size = total_columns / 3
                         row = "\e[K" + entry.time_stamp.strftime("%m-%d %H:%M:%S") + 
-				"\e[16G" + entry.ip_address + 
+				"\e[16G" + entry.ip_address.to_s + 
 				"\e[#{17+ 16}G" + entry.request.slice(0, text_column_size) + 
 				"\e[#{text_column_size + 17 + 1 + 16}G" + entry.response_code +
 				"\e[#{text_column_size + 17 + 1 + 4 + 16}G" + entry.http_referer.slice(0, text_column_size) + 
@@ -94,7 +133,7 @@ class LogListView < BasicView
                 end
                 print "\e[J"
                 set_cursor $stdin.winsize[0], 1
-                print red("Type 'q' to exit, up/down to move, 's' to sort or filter");
+                print red("Esc to exit, up/down to move, 's' to sort or filter");
 	end
 
 	def quittable?
@@ -105,5 +144,55 @@ class LogListView < BasicView
 end
 
 class SortFilterView < BasicView
+
+	def quittable?
+		false
+	end
+
+	##########################
+	# initial display of sort/
+	# filter
+	##########################
+	def display sort_filter
+		clear_display
+		set_cursor
+		print red(center("Sort and Filter"))
+		update sort_filter
+	end
+
+	##############################
+	# update the display contents
+	# of sort/filter object
+	##############################
+	def update sort_filter
+		set_cursor 2,1
+
+		#----Loop through outer field_list array [a] => the fields----#
+		sort_filter.field_list.each_with_index do |field_name, index|
+		    #---- if this is nil or String then it's an input field and not a choice box-----#
+		    if field_name[1] != nil && field_name[1].class != String
+			#----Display the choice box----#
+			label = field_name[0].to_s.gsub(/_/, " ").upcase + ":"
+			label = red(label) if index == sort_filter.field_name_index
+			puts label
+			field_name[1].each_with_index do | option, opt_index | 
+				option = red(option) if opt_index == sort_filter.field_selection[index]
+				puts "\e[K" + option.to_s
+			end
+			print "\e[K\n\e[K\n"
+		    else
+			#-----Display the input field----#
+			#These are typed input fields
+			input = ""
+			input = field_name[1] if field_name[1] != nil
+			row = "Show only records where #{field_name[0].to_s.gsub(/_/, " ").upcase} contains: #{input}"
+			row = red(row) if index == sort_filter.field_name_index
+			puts "\e[K" + row
+		    end
+		end
+		print "\e[J"
+		set_cursor $stdin.winsize[0], 1
+		print red("Esc to return, Move up/down to select, Tab to change focus, Return to Apply")
+	end
 end
 
