@@ -136,7 +136,7 @@ class LogListView < BasicView
                 end
                 print "\e[J"
                 set_cursor $stdin.winsize[0], 1
-                print red("Esc to exit, up/down to move, 's' to sort or filter");
+                print red("Esc to exit, up/down to move, 's' to sort or filter, Return to see the full entry");
 	end
 
 	def quittable?
@@ -198,4 +198,25 @@ class SortFilterView < BasicView
 		print red("Esc to return, Move up/down to select, Tab to change focus, Return to Apply")
 	end
 end
-
+class LogEntryView < BasicView
+	def quittable?
+		false
+	end
+	def display log_file
+		entry = log_file.log_entries[log_file.log_entry_index]
+		clear_display
+		set_cursor
+		print red(center("Displaying Entry #: #{log_file.log_entry_index + 1}"))
+		set_cursor 3, 1
+		print "Time:         \t#{entry.time_stamp.to_s}\n"
+		print "IP:           \t#{entry.ip_address.to_s}\n"
+		print "Request:      \t#{entry.request}\n"
+		print "Response:     \t#{entry.response_code}\n"
+		print "File Size:    \t#{entry.file_size}\n"
+		print "HTTP Referer: \t#{entry.http_referer}\n"
+		print "User Agent:   \t#{entry.user_agent}\n"
+		print "\e[J"
+		set_cursor $stdin.winsize[0], 1
+		print red("Esc to return to List View")
+	end
+end

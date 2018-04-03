@@ -52,7 +52,8 @@ class LogParserController
 					file_dialog_select
 				when "SortFilterView"
 					apply_sort_filter
-				
+				when "LogListView"
+					display_log_entry			
 			    end				
                         when "\e[A"
                            #up button ... update the view with a move action
@@ -85,6 +86,8 @@ class LogParserController
 			    case @current_view.class.to_s
 				when "LogListView"
 					sort_select if user_input == "s"
+				when "LogEntryView"
+					escape_log_entry if user_input == "\e"
 			    	when "SortFilterView"
 					if user_input == "\e"
 						escape_sort_filter
@@ -249,4 +252,20 @@ class LogParserController
 		end
 	end
 
+	#######################
+	# Output one line of
+	# the log on one screen
+	#######################
+	def display_log_entry
+		@current_view = LogEntryView.new
+		@current_view.display @log_file
+	end
+
+	####################
+	# return to log list 
+	####################
+	def escape_log_entry
+		@current_view = LogListView.new
+		@current_view.display @log_file
+	end
 end
