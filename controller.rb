@@ -1,12 +1,14 @@
 class LogParserController
 	
 	def initialize
-		@logfile = LogFile.new
-		@currentView = FileDialogView.new
+		@log_file = LogFile.new
+		@current_view = FileDialogView.new
+		@current_view.clear_display
+		@current_view.set_cursor
 	end
 	def run
 		while true do
-			@currentView.display
+			@current_view.display
 			break
 		end	
 	end
