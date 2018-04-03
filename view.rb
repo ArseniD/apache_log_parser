@@ -22,6 +22,9 @@ class FileDialogView < BasicView
 	def display
 		puts red(center("Select an Apache log file."))
 	end
+	def quittable?
+		true
+	end
 end
 
 class LogListView < BasicView
