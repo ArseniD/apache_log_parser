@@ -35,7 +35,10 @@ class BasicView
 	def red text
 		"\e[31;40m#{text}\e[0m"
 	end
-
+	def notice message
+		set_cursor $stdin.winsize[0], 1
+		print "\e[K" + red(message)
+	end
 end
 class FileDialogView < BasicView
 

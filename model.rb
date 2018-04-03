@@ -19,15 +19,20 @@ class LogFile
 	# If not, return false.
 	###############################
 	def cd path
-		if Dir.exist?(path)
-			@file_path = path
-			@directory = Dir.new(@file_path)
-			@directory_index = 0
-			@list_start = 0
-			true
-		else
-			false
-		end	
+		begin
+			if Dir.exist?(path)
+				@file_path = path
+				@directory = Dir.new(@file_path)
+				@directory_index = 0
+				@list_start = 0
+				true
+			else
+				false
+			end	
+		rescue Errno::EACCES
+			@file_path.gsub! /([^\/]*\/)$/, ""							
+                	raise NoDirAccess
+                end
 	end
 
 	######################################
@@ -36,18 +41,22 @@ class LogFile
 	# into our log_entries array
 	######################################
 	def load_file
-		if File.file?(@file_path + @directory.entries[@directory_index])
-                	@file_name = @directory.entries[@directory_index]
-                        log_array = IO.readlines(@file_path + @file_name)
-			log_array.each_with_index do |log, index|
-				@log_entries[index] = LogEntry.new log
+		begin
+			if File.file?(@file_path + @directory.entries[@directory_index])
+                		@file_name = @directory.entries[@directory_index]
+                       		log_array = IO.readlines(@file_path + @file_name)
+				log_array.each_with_index do |log, index|
+					@log_entries[index] = LogEntry.new log
+				end
+				@log_entry_index = 0
+				@list_start = 0
+				true
+                	else
+				false
 			end
-			@log_entry_index = 0
-			@list_start = 0
-			true
-                else
-			false
-		end
+		rescue Errno::EACCES
+                	raise NoFileAccess
+                end
 	end
 
 	#####################################
@@ -82,10 +91,18 @@ class LogEntry
 	# data from the log_file, and parse it
 	######################################	
 	def initialize row = nil
-		if row
-			row.gsub! /\t/, "     "
+		if row	
+			begin
+				row.gsub! /\t/, "     "
+			rescue ArgumentError
+				raise NotAnApacheAccessLog
+			end
 			match_data = parse_row row
-			set_properties match_data
+			if match_data
+				set_properties match_data
+			else
+				raise NotAnApacheAccessLog
+			end
 		end
 	end
 
@@ -207,6 +224,8 @@ class SortFilter
                                                	entry.time_stamp.sec == matches[5].to_i
                                        	end
                         	end
+			else
+				raise InvalidDate
 			end
 		end
 		

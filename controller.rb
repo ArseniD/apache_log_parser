@@ -130,12 +130,18 @@ class LogParserController
 	# or result in loading a file
 	#######################################
 	def file_dialog_select
-		case @log_file.select_directory_or_load_file
-			when :directory
-				@current_view.update @log_file
-			when :file
-				@current_view = LogListView.new
-				@current_view.display @log_file
+		begin
+			case @log_file.select_directory_or_load_file
+				when :directory
+					@current_view.update @log_file
+				when :file
+					@current_view = LogListView.new
+					@current_view.display @log_file
+			end
+		rescue NotAnApacheAccessLog
+			@current_view.notice "File does not conform to Access Log pattern"
+		rescue NoFileAccess, NoDirAccess
+			@current_view.notice "File or Directory Access Not Permitted"
 		end
 	end
 
@@ -223,18 +229,24 @@ class LogParserController
 		end
 		@current_view.update @log_file.sort_filter
 	end
-	
+
 	########################
 	# Take the data and run
 	# the sort/filter 
 	# algorithm
 	########################
 	def apply_sort_filter
-		@log_file.log_entries = []
-		@log_file.select_directory_or_load_file
-		@log_file.sort_filter.apply_selections @log_file
-		@current_view = LogListView.new
-		@current_view.display @log_file
+		begin
+			@log_file.log_entries = []
+			@log_file.select_directory_or_load_file
+			@log_file.sort_filter.apply_selections @log_file
+			@current_view = LogListView.new
+			@current_view.display @log_file
+		rescue IPAddr::InvalidAddressError
+			@current_view.notice "Please input a valid IP address"
+		rescue InvalidDate
+			@current_view.notice "Please input a date and time 'MM-DD HH:MM:SS'"
+		end
 	end
 
 end
