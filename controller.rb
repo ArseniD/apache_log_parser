@@ -50,6 +50,9 @@ class LogParserController
 			    case @current_view.class.to_s
 				when "FileDialogView"
 					file_dialog_select
+				when "SortFilterView"
+					apply_sort_filter
+				
 			    end				
                         when "\e[A"
                            #up button ... update the view with a move action
@@ -220,4 +223,18 @@ class LogParserController
 		end
 		@current_view.update @log_file.sort_filter
 	end
+	
+	########################
+	# Take the data and run
+	# the sort/filter 
+	# algorithm
+	########################
+	def apply_sort_filter
+		@log_file.log_entries = []
+		@log_file.select_directory_or_load_file
+		@log_file.sort_filter.apply_selections @log_file
+		@current_view = LogListView.new
+		@current_view.display @log_file
+	end
+
 end

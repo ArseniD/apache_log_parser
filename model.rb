@@ -137,12 +137,94 @@ class SortFilter
 	# @field_selection => selections of c, above
 	#############################################
 	def initialize
-		@field_list = [[:sort_by, [:none, :time_stamp, :ip_address, :file_size]], [:sort_direction, [:asc, :desc]],[:time_stamp],[:ip_address],[:request]]
+		@field_list = [
+			[:sort_by, [:none, :time_stamp, :ip_address, :file_size]], 
+			[:sort_direction, [:asc, :desc]],
+			[:time_stamp],
+			[:ip_address],
+			[:request]]
 		@field_name_index = 0
 		@field_selection = [0,0]
 		
 		
 	end
 
-	
+
+	#################################
+	# Applies the selections of the 
+	# sort filter to the log_entries
+	# in the log_file passed in to 
+	# the method
+	# this is a destructive method
+	# subsequent reload will
+	# be required for filter changes
+	################################
+
+	def apply_selections log_file
+		#first sort the file
+		if @field_selection[0] != 0	
+				if @field_selection[1]==0
+					#sort by selected symbol asc
+					log_file.log_entries.sort! do |entry_a, entry_b|
+						entry_a.send(@field_list[0][1][@field_selection[0]]).to_i <=> entry_b.send(@field_list[0][1][@field_selection[0]]).to_i
+					end
+				else
+					#sort by selected symbol desc
+                                        log_file.log_entries.sort! do |entry_a, entry_b|
+                                                entry_b.send(@field_list[0][1][@field_selection[0]]).to_i <=> entry_a.send(@field_list[0][1][@field_selection[0]]).to_i
+                                        end
+				end
+		end
+
+		#apply the time stamp filter
+		if @field_list[2][1] != "" && @field_list[2][1] != nil
+			#apply a time stamp filter
+			regex = /(..)[\/-](..)\s(..):(..):(..)/
+			matches = @field_list[2][1].match regex
+			if matches != nil
+				if matches[1] != "**"
+					log_file.log_entries.select! do | entry |
+						entry.time_stamp.month == matches[1].to_i
+					end
+				end
+				if matches[2] != "**"
+                                	log_file.log_entries.select! do | entry |
+                                               	entry.time_stamp.day == matches[2].to_i
+                               	       end
+                       		end
+				if matches[3] != "**"
+                                        log_file.log_entries.select! do | entry |
+               	                                entry.time_stamp.hour == matches[3].to_i
+                                       	end
+        	              	end
+				if matches[4] != "**"
+                               	        log_file.log_entries.select! do | entry |
+                                       	        entry.time_stamp.min == matches[4].to_i
+                               	    	end
+                       		end
+				if matches[5] != "**"
+                                       	log_file.log_entries.select! do | entry |
+                                               	entry.time_stamp.sec == matches[5].to_i
+                                       	end
+                        	end
+			end
+		end
+		
+		# apply the ip address filter
+		if @field_list[3][1] != "" && @field_list[3][1] != nil
+                        #apply an ip filter
+			ip_address_range = IPAddr.new(field_list[3][1])
+			log_file.log_entries.select! do | entry |
+				ip_address_range.include? entry.ip_address
+			end
+                end
+
+		# apply the request filter
+		if @field_list[4][1] != "" && @field_list[4][1] != nil
+                        log_file.log_entries.select! do | entry |
+				entry.request.include? field_list[4][1]
+			end 
+               end
+		
+	end	
 end
