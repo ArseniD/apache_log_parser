@@ -64,6 +64,8 @@ class LogParserController
 
 	def file_dialog_move increment
 		@log_file.directory_index += increment
+		@log_file.directory_index = 0 if @log_file.directory_index < 0
+		@log_file.directory_index = @log_file.directory.entries.length - 1 if @log_file.directory_index > @log_file.directory.entries.length - 1
                 if @log_file.directory_index < @log_file.list_start
                       @log_file.list_start = @log_file.directory_index - $stdin.winsize[0] + 3
                 elsif @log_file.directory_index > @log_file.list_start + $stdin.winsize[0] - 3
@@ -84,6 +86,8 @@ class LogParserController
 
 	def log_list_move increment
 		@log_file.log_entry_index += increment
+		@log_file.log_entry_index = 0 if @log_file.log_entry_index < 0
+		@log_file.log_entry_index = @log_file.log_entries.length - 1 if @log_file.log_entry_index > @log_file.log_entries.length - 1
                 if @log_file.log_entry_index < @log_file.list_start
                       @log_file.list_start = @log_file.log_entry_index - $stdin.winsize[0] + 3
                 elsif @log_file.log_entry_index > @log_file.list_start + $stdin.winsize[0] - 3
