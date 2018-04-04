@@ -133,18 +133,51 @@ class LogParserController
 	# or result in loading a file
 	#######################################
 	def file_dialog_select
-		begin
-			case @log_file.select_directory_or_load_file
-				when :directory
-					@current_view.update @log_file
-				when :file
-					@current_view = LogListView.new
-					@current_view.display @log_file
+		# create queue to store symbols, :file or :directory
+		load_response = Queue.new
+		# create a thread to load file data
+		load_thread = Thread.new do
+			begin
+				# store response in queue
+				load_response << @log_file.select_directory_or_load_file
+			rescue NotAnApacheAccessLog
+				@log_file.clear_file
+				@current_view.notice "File does not conform to Access Log pattern"
+			rescue NoFileAccess, NoDirAccess
+				@log_file.clear_file
+				@current_view.notice "File or Directory Access Not Permitted"
 			end
-		rescue NotAnApacheAccessLog
-			@current_view.notice "File does not conform to Access Log pattern"
-		rescue NoFileAccess, NoDirAccess
-			@current_view.notice "File or Directory Access Not Permitted"
+		end
+		display_thread = Thread.new do
+			#if the load_thread is working ok
+			while load_thread.status != nil && load_thread.status != false do
+				# load_thread has initialized the @actual_file
+				if @log_file.file_initialized?
+					if @log_file.file_percent_loaded != 1
+						@current_view.progress_bar @log_file.file_percent_loaded, "File Loading"
+					else
+						# display a new progress bar after file is loaded
+						# displaying percent of parsing
+						@current_view.progress_bar @log_file.parse_percent, "File Parsing"
+					end
+				end
+				Thread.pass
+			end
+		end
+
+		# Join threads to ensure processing is complete
+		display_thread.join
+		load_thread.join
+
+		#if successful there is an object in the queue
+		if !load_response.empty?
+			case load_response.pop
+				when :directory
+	                        	@current_view.update @log_file
+                        	when :file
+        	                	@current_view = LogListView.new
+               		       	 	@current_view.display @log_file
+			end
 		end
 	end
 
@@ -239,9 +272,31 @@ class LogParserController
 	# algorithm
 	########################
 	def apply_sort_filter
-		begin
+		# Create a thread to load the file data
+		load_thread = Thread.new do
 			@log_file.log_entries = []
+			@log_file.clear_file
 			@log_file.select_directory_or_load_file
+		end
+		# Create a thread to display progress
+		display_thread = Thread.new do
+                        while load_thread.status != nil && load_thread.status != false do
+                                if @log_file.file_initialized?
+                                        if @log_file.file_percent_loaded != 1
+                                                @current_view.progress_bar @log_file.file_percent_loaded, "File Loading"
+                                        else
+                                                @current_view.progress_bar @log_file.parse_percent, "File Parsing"
+                                        end
+                                end
+                                Thread.pass
+                        end
+                end
+		# join the threads to ensure processing is complete
+		display_thread.join
+		load_thread.join
+
+		# apply the filters and sorting
+		begin
 			@log_file.sort_filter.apply_selections @log_file
 			@current_view = LogListView.new
 			@current_view.display @log_file
@@ -253,17 +308,17 @@ class LogParserController
 	end
 
 	#######################
-	# Output one line of
-	# the log on one screen
-	#######################
-	def display_log_entry
-		@current_view = LogEntryView.new
-		@current_view.display @log_file
-	end
+        # Output one line of
+        # the log on one screen
+        #######################
+        def display_log_entry
+                @current_view = LogEntryView.new
+                @current_view.display @log_file
+        end
 
-	####################
-	# return to log list 
-	####################
+        ####################
+        # return to log list 
+        ####################
 	def escape_log_entry
 		@current_view = LogListView.new
 		@current_view.display @log_file

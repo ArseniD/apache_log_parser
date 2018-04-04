@@ -1,6 +1,6 @@
 require 'ipaddr'
 class LogFile
-	attr_accessor :file_name, :file_path, :log_entries, :directory, :directory_index, :log_entry_index, :list_start, :sort_filter
+	attr_accessor :file_name, :file_path, :log_entries, :directory, :directory_index, :log_entry_index, :list_start, :sort_filter, :parse_percent
 	
 	############################### 
 	#  Setup the object ... 
@@ -11,6 +11,8 @@ class LogFile
 		cd "./"
 		@log_entries = Array.new
 		@sort_filter = SortFilter.new
+		@parse_percent = 0.0
+		@actual_file = nil
 	end
 
 	###############################
@@ -35,6 +37,18 @@ class LogFile
                 end
 	end
 
+	def file_initialized?
+		@actual_file != nil
+	end
+
+	def file_percent_loaded
+		@actual_file.pos.to_f / @actual_file.size.to_f
+	end
+
+	def clear_file
+		@actual_file = nil
+	end
+
 	######################################
 	# Once the user has chozen a file
 	# we need to load data from the file
@@ -44,9 +58,13 @@ class LogFile
 		begin
 			if File.file?(@file_path + @directory.entries[@directory_index])
                 		@file_name = @directory.entries[@directory_index]
-                       		log_array = IO.readlines(@file_path + @file_name)
+				@actual_file = File.new(@file_path + @file_name)
+				@file_name = @directory.entries[@directory_index]
+				log_array = @actual_file.readlines
+				@parse_percent = 0.0			
 				log_array.each_with_index do |log, index|
 					@log_entries[index] = LogEntry.new log
+					@parse_percent = index.to_f / log_array.count.to_f
 				end
 				@log_entry_index = 0
 				@list_start = 0

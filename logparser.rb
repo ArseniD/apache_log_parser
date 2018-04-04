@@ -1,3 +1,4 @@
+require 'thread'
 require 'io/console'
 require './model.rb'
 require './view.rb'

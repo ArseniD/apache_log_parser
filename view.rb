@@ -39,6 +39,22 @@ class BasicView
 		set_cursor $stdin.winsize[0], 1
 		print "\e[K" + red(message)
 	end
+	
+	########################
+	# Outputs a progress bar
+	# of percent completed
+	# preceded by Label
+	########################
+	def progress_bar percent, label = "Loading"
+		set_cursor $stdin.winsize[0], 1
+		label_line = label + " ["
+		print label_line
+		length = percent * ($stdin.winsize[1] - label_line.length + 1)
+		bar = "*" * length
+		print bar + "\e[K"
+		set_cursor $stdin.winsize[0], $stdin.winsize[1]
+		print "]"
+	end
 end
 class FileDialogView < BasicView
 
